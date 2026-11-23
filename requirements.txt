@@ -1,0 +1,8 @@
+# Runtime dependencies. playwright must match the Docker base image tag (v1.65.2).
+httpx==0.28.1        # the JSON API source (SOURCE_MODE=api, default)
+playwright==1.65.2   # the browser scraper, kept as a backup (SOURCE_MODE=browser)
+asyncpg==0.32.0
+fastapi==0.165.0
+uvicorn==0.54.0      # api.HttpServer overrides uvicorn's capture_signals(); re-check it when upgrading
+aiogram==3.32.0
+tzdata==2026.6       # Europe/Kyiv time zone data, independent of the OS

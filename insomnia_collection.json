@@ -1,0 +1,325 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-19T12:00:00.000Z",
+  "__export_source": "airsensor",
+  "resources": [
+    {
+      "_id": "wrk_airsensor",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "AirSensor",
+      "description": "Read-only HTTP API of the AirSensor collector (air-raid alerts in Lviv oblast by raion).\n\nThe server listens on HTTP_PORT (default 8000). If you changed HTTP_PORT in .env, change `base_url` in the environment.\n\nTimes in query parameters are ISO 8601 dates or datetimes. Values without a time zone are Kyiv time, and a date-only `to` includes that whole day. Times in responses are shown in Kyiv time.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_airsensor_base",
+      "_type": "environment",
+      "parentId": "wrk_airsensor",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "day": "2026-11-19"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "day"]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 0
+    },
+
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "parentId": "wrk_airsensor",
+      "name": "Health",
+      "description": "",
+      "environment": {},
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "Health",
+      "description": "200 `ok` when the last read of the source was valid and the database answers.\n\n503 `degraded` otherwise: `source.state` is `starting` (no valid read yet), `source_down` or `internet_down` (with the open outage), or `database` is `down`.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health",
+      "parameters": [],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 100
+    },
+
+    {
+      "_id": "fld_alerts",
+      "_type": "request_group",
+      "parentId": "wrk_airsensor",
+      "name": "Alerts",
+      "description": "GET /alerts: alert history, newest first. Every parameter is optional.",
+      "environment": {},
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_alerts_latest",
+      "_type": "request",
+      "parentId": "fld_alerts",
+      "name": "Latest alerts",
+      "description": "The 100 newest alerts. The disabled parameters show every filter; enable any of them.\n\n- `raion`: one of the 7 raion names, e.g. `Стрийський район`\n- `type`: `air-raid`, `artillery-shelling`, `urban-fights`, `chemical`, `nuclear`\n- `from` / `to`: alerts active at any moment in this window\n- `limit`: 1 to 1000 (default 100)\n\n`start_uncertain` / `end_uncertain` mean the start or end fell inside an outage, so the time is when it was first or last observed.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "limit", "value": "100", "disabled": false},
+        {"name": "raion", "value": "Стрийський район", "disabled": true},
+        {"name": "type", "value": "air-raid", "disabled": true},
+        {"name": "from", "value": "{{ _.day }}", "disabled": true},
+        {"name": "to", "value": "{{ _.day }}", "disabled": true}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_alerts_day",
+      "_type": "request",
+      "parentId": "fld_alerts",
+      "name": "Alerts on a day",
+      "description": "Alerts active at any moment of `day` (Kyiv time, 00:00 to 24:00). Set `day` in the environment.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "from", "value": "{{ _.day }}", "disabled": false},
+        {"name": "to", "value": "{{ _.day }}", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_alerts_window",
+      "_type": "request",
+      "parentId": "fld_alerts",
+      "name": "Alerts in a time window",
+      "description": "Datetimes without an offset are Kyiv time. An explicit offset also works, e.g. `2026-11-19T06:00:00+00:00`.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "from", "value": "{{ _.day }}T08:00", "disabled": false},
+        {"name": "to", "value": "{{ _.day }}T20:00", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 300
+    },
+    {
+      "_id": "req_alerts_raion",
+      "_type": "request",
+      "parentId": "fld_alerts",
+      "name": "Alerts in one raion",
+      "description": "Raions: Львівський, Дрогобицький, Золочівський, Самбірський, Стрийський, Шептицький, Яворівський район. Any other value is a 400.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "raion", "value": "Стрийський район", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 400
+    },
+    {
+      "_id": "req_alerts_type",
+      "_type": "request",
+      "parentId": "fld_alerts",
+      "name": "Alerts of one type",
+      "description": "Types seen on alerts.in.ua: `air-raid`, `artillery-shelling`, `urban-fights`, `chemical`, `nuclear`.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "type", "value": "air-raid", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 500
+    },
+
+    {
+      "_id": "fld_stats",
+      "_type": "request_group",
+      "parentId": "wrk_airsensor",
+      "name": "Stats",
+      "description": "GET /stats: per raion, the alert count, total duration and longest alert. Only the part of each alert inside the window counts. All 7 raions are always listed.",
+      "environment": {},
+      "metaSortKey": 300
+    },
+    {
+      "_id": "req_stats_all",
+      "_type": "request",
+      "parentId": "fld_stats",
+      "name": "Stats, all time",
+      "description": "No window: everything stored, up to now.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/stats",
+      "parameters": [],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_stats_day",
+      "_type": "request",
+      "parentId": "fld_stats",
+      "name": "Stats for a day",
+      "description": "The alert part of the daily report for `day` (Kyiv time).",
+      "method": "GET",
+      "url": "{{ _.base_url }}/stats",
+      "parameters": [
+        {"name": "from", "value": "{{ _.day }}", "disabled": false},
+        {"name": "to", "value": "{{ _.day }}", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 200
+    },
+
+    {
+      "_id": "fld_outages",
+      "_type": "request_group",
+      "parentId": "wrk_airsensor",
+      "name": "Outages",
+      "description": "GET /outages: connection failures, newest first. `kind` is `source` (the site failed, internet up), `internet` (internet down) or `service` (AirSensor itself was not running). `reason` is the error kind that opened the outage.",
+      "environment": {},
+      "metaSortKey": 400
+    },
+    {
+      "_id": "req_outages_latest",
+      "_type": "request",
+      "parentId": "fld_outages",
+      "name": "Latest outages",
+      "description": "The 100 newest outages. `ongoing: true` means it is still open; its `downtime_s` counts up to now.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/outages",
+      "parameters": [
+        {"name": "limit", "value": "100", "disabled": false},
+        {"name": "from", "value": "{{ _.day }}", "disabled": true},
+        {"name": "to", "value": "{{ _.day }}", "disabled": true}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_outages_day",
+      "_type": "request",
+      "parentId": "fld_outages",
+      "name": "Outages on a day",
+      "description": "The outages behind the daily report for `day` (Kyiv time). The report sent on a given morning covers the previous day.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/outages",
+      "parameters": [
+        {"name": "from", "value": "{{ _.day }}", "disabled": false},
+        {"name": "to", "value": "{{ _.day }}", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 200
+    },
+
+    {
+      "_id": "fld_errors",
+      "_type": "request_group",
+      "parentId": "wrk_airsensor",
+      "name": "Error examples",
+      "description": "Requests that are meant to fail, to show the error responses. A database failure on any endpoint gives 503 `{\"error\": \"database_unavailable\"}`.",
+      "environment": {},
+      "metaSortKey": 500
+    },
+    {
+      "_id": "req_error_raion",
+      "_type": "request",
+      "parentId": "fld_errors",
+      "name": "Unknown raion (400)",
+      "description": "Expected: 400, with the list of valid raion names in `detail`.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "raion", "value": "Київ", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_error_date",
+      "_type": "request",
+      "parentId": "fld_errors",
+      "name": "Bad date (400)",
+      "description": "Expected: 400, `from must be an ISO 8601 date or datetime ...`.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/outages",
+      "parameters": [
+        {"name": "from", "value": "yesterday", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_error_limit",
+      "_type": "request",
+      "parentId": "fld_errors",
+      "name": "Limit out of range (422)",
+      "description": "Expected: 422, FastAPI's validation error (limit must be 1 to 1000).",
+      "method": "GET",
+      "url": "{{ _.base_url }}/alerts",
+      "parameters": [
+        {"name": "limit", "value": "5000", "disabled": false}
+      ],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 300
+    },
+
+    {
+      "_id": "req_openapi",
+      "_type": "request",
+      "parentId": "wrk_airsensor",
+      "name": "OpenAPI schema",
+      "description": "Generated by FastAPI. Interactive docs are at {{ _.base_url }}/docs in a browser.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/openapi.json",
+      "parameters": [],
+      "headers": [],
+      "body": {},
+      "authentication": {},
+      "settingEncodeUrl": true,
+      "metaSortKey": 600
+    }
+  ]
+}

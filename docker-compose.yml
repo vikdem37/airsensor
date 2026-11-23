@@ -1,0 +1,51 @@
+# AirSensor: the collector (Python + headless Chromium) and PostgreSQL.
+#   docker compose up --build           start
+#   docker compose logs -f collector    watch the JSON logs (also in ./logs)
+#   docker compose stop                 graceful stop (SIGTERM → service_stopping / service_stopped)
+name: airsensor
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: airsensor
+      POSTGRES_USER: airsensor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airsensor}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airsensor -d airsensor"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  collector:
+    build: .
+    init: true                 # tini as PID 1: forwards SIGTERM and reaps Chromium's child processes
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://airsensor:${POSTGRES_PASSWORD:-airsensor}@db:5432/airsensor
+      LOG_DIR: /app/logs
+      HTTP_PORT: ${HTTP_PORT:-8000}   # same value on both sides of the port mapping below
+    ports:
+      - "${HTTP_PORT:-8000}:${HTTP_PORT:-8000}"
+    volumes:
+      - ./logs:/app/logs
+    networks: [backend, egress]
+    depends_on:
+      db:
+        condition: service_healthy
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+networks:
+  backend:
+    internal: true             # collector <-> db only; no internet on this network
+  egress: {}                   # collector -> internet. Disconnect it to simulate internet loss.
+
+volumes:
+  pgdata:
